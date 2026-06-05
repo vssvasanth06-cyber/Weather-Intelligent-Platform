@@ -7,4 +7,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  css: {
+    transformer: 'postcss',  // use postcss instead of lightningcss
+  },
 })
