@@ -10,6 +10,7 @@ from app.sensors.sensor_service import (
 )
 from app.database.dependencies import get_db
 from app.websocket.ws_manager import manager
+from app.notifications.email_service import check_and_send_alerts
 
 router = APIRouter(
     prefix="/sensor",
@@ -32,6 +33,12 @@ async def upload_sensor_data(
         db,
         data.light_intensity
     )
+
+    # Check and send email alerts for critical readings
+    from app.database.models import SensorReading as SR
+    latest = db.query(SR).filter(SR.device_id == data.device_id).order_by(SR.id.desc()).first()
+    if latest:
+        check_and_send_alerts(latest)
 
     # Broadcast to all WebSocket clients immediately
     await manager.broadcast({
