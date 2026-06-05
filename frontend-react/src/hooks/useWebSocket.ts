@@ -1,54 +1,104 @@
+/**
+ * Smart data hook — tries WebSocket first, falls back to HTTP polling.
+ * WebSocket works on local/paid servers.
+ * HTTP polling works everywhere including Render free tier.
+ */
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { WeatherData } from "../types/weather";
-import { WS_URL } from "../api/weatherApi";
+import { API_BASE, WS_URL } from "../api/weatherApi";
+import axios from "axios";
 
 const MAX_HISTORY = 50;
+const POLL_INTERVAL = 3000; // 3 seconds
 
 export function useWeatherWebSocket() {
     const [latest, setLatest] = useState<WeatherData | null>(null);
     const [history, setHistory] = useState<WeatherData[]>([]);
     const [connected, setConnected] = useState(false);
     const wsRef = useRef<WebSocket | null>(null);
-    const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const usingPolling = useRef(false);
 
-    const connect = useCallback(() => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    const addReading = useCallback((data: WeatherData) => {
+        data.timestamp = data.timestamp || new Date().toISOString();
+        setLatest(data);
+        setHistory(prev => [data, ...prev].slice(0, MAX_HISTORY));
+    }, []);
 
-        const ws = new WebSocket(WS_URL);
-        wsRef.current = ws;
+    // HTTP polling fallback
+    const startPolling = useCallback(() => {
+        if (usingPolling.current) return;
+        usingPolling.current = true;
+        console.log("[Data] Switched to HTTP polling mode");
 
-        ws.onopen = () => setConnected(true);
-
-        ws.onmessage = (event) => {
+        const poll = async () => {
             try {
-                const data: WeatherData = JSON.parse(event.data);
-                data.timestamp = data.timestamp || new Date().toISOString();
-                setLatest(data);
-                setHistory((prev) => {
-                    const next = [data, ...prev];
-                    return next.slice(0, MAX_HISTORY);
-                });
+                const res = await axios.get(
+                    `${API_BASE}/dashboard/weather-summary/WTH001`
+                );
+                if (res.data && res.data.temperature !== undefined) {
+                    setConnected(true);
+                    addReading(res.data);
+                }
             } catch {
-                // ignore malformed messages
+                setConnected(false);
             }
         };
 
-        ws.onclose = () => {
-            setConnected(false);
-            // Auto-reconnect after 3 seconds
-            reconnectTimer.current = setTimeout(connect, 3000);
-        };
+        poll(); // immediate first call
+        pollRef.current = setInterval(poll, POLL_INTERVAL);
+    }, [addReading]);
 
-        ws.onerror = () => ws.close();
-    }, []);
+    // WebSocket attempt
+    const connectWS = useCallback(() => {
+        try {
+            const ws = new WebSocket(WS_URL);
+            wsRef.current = ws;
+
+            // If WS doesn't open in 5s → fallback to polling
+            const timeout = setTimeout(() => {
+                ws.close();
+                startPolling();
+            }, 5000);
+
+            ws.onopen = () => {
+                clearTimeout(timeout);
+                setConnected(true);
+                console.log("[Data] WebSocket connected");
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data: WeatherData = JSON.parse(event.data);
+                    addReading(data);
+                } catch { /* ignore */ }
+            };
+
+            ws.onclose = () => {
+                clearTimeout(timeout);
+                setConnected(false);
+                if (!usingPolling.current) {
+                    // WS closed unexpectedly → switch to polling
+                    startPolling();
+                }
+            };
+
+            ws.onerror = () => {
+                clearTimeout(timeout);
+                ws.close();
+            };
+        } catch {
+            startPolling();
+        }
+    }, [addReading, startPolling]);
 
     useEffect(() => {
-        connect();
+        connectWS();
         return () => {
-            if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
             wsRef.current?.close();
+            if (pollRef.current) clearInterval(pollRef.current);
         };
-    }, [connect]);
+    }, [connectWS]);
 
     return { latest, history, connected };
 }
