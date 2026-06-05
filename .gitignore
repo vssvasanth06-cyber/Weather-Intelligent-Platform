@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.venv-1/
+.venv-2/
+venv/
+
+# Environment secrets — NEVER commit these
+Backend/.env
+frontend-react/.env.local
+frontend-react/.env.production
+
+# Node
+node_modules/
+frontend-react/dist/
+
+# IDE
+.vscode/
+.idea/

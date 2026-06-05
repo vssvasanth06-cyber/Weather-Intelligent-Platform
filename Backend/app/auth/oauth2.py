@@ -32,6 +32,9 @@ def get_current_user(
         if username is None:
             raise credentials_exception
 
+        if role is None:
+            raise credentials_exception
+
         return {
             "username": username,
             "role": role

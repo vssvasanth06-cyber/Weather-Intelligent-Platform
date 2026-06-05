@@ -80,6 +80,7 @@ def login_user(
         User.username == username
     ).first()
 
+    # Invalid Username
     if not user:
 
         log_security_event(
@@ -93,10 +94,38 @@ def login_user(
             "message": "Invalid username"
         }
 
+    # Account Locked Check
+    if user.is_locked == 1:
+
+        log_security_event(
+            event_type="ACCOUNT_LOCKED",
+            severity="CRITICAL",
+            description=f"Locked account access attempt: {username}",
+            db=db
+        )
+
+        return {
+            "message": "Account Locked"
+        }
+
+    # Wrong Password
     if not verify_password(
         password,
         user.password_hash
     ):
+
+        user.failed_attempts += 1
+
+        if user.failed_attempts >= 5:
+
+            user.is_locked = 1
+
+            log_security_event(
+                event_type="ACCOUNT_LOCKED",
+                severity="CRITICAL",
+                description=f"User locked: {username}",
+                db=db
+            )
 
         log_security_event(
             event_type="FAILED_LOGIN",
@@ -105,9 +134,16 @@ def login_user(
             db=db
         )
 
+        db.commit()
+
         return {
             "message": "Invalid password"
         }
+
+    # Successful Login
+    user.failed_attempts = 0
+
+    db.commit()
 
     token = create_access_token(
         {
@@ -124,5 +160,7 @@ def login_user(
 
     return {
         "access_token": token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "username": user.username,
+        "role": user.role.role_name
     }

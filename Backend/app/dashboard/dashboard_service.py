@@ -40,5 +40,27 @@ def get_weather_summary(
         "pressure": latest_reading.pressure,
         "rainfall": latest_reading.rainfall,
         "wind_speed": latest_reading.wind_speed,
+        "light_intensity": latest_reading.light_intensity or 0.0,
         "timestamp": latest_reading.timestamp
     }
+
+
+def get_sensor_history(
+    device_id: str,
+    db: Session
+):
+
+    readings = (
+        db.query(
+            SensorReading
+        )
+        .filter(
+            SensorReading.device_id == device_id
+        )
+        .order_by(
+            SensorReading.id
+        )
+        .all()
+    )
+
+    return readings

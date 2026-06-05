@@ -2,8 +2,8 @@ from sqlalchemy import (
     Column,
     Integer,
     String,
-    ForeignKey,
     Float,
+    ForeignKey,
     DateTime
 )
 
@@ -75,6 +75,17 @@ class User(Base):
         ForeignKey("roles.id")
     )
 
+    # Account Lockout Fields
+    failed_attempts = Column(
+        Integer,
+        default=0
+    )
+
+    is_locked = Column(
+        Integer,
+        default=0
+    )
+
     role = relationship(
         "Role",
         back_populates="users"
@@ -97,7 +108,10 @@ class AuditLog(Base):
 
     action = Column(String)
 
-    timestamp = Column(String)
+    timestamp = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
 
 
 # =========================
@@ -118,7 +132,10 @@ class SecurityEvent(Base):
 
     description = Column(String)
 
-    timestamp = Column(String)
+    timestamp = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
 
 
 # =========================
@@ -174,7 +191,7 @@ class SensorReading(Base):
 
     device_id = Column(
         String,
-        nullable=False
+        ForeignKey("devices.device_id")
     )
 
     temperature = Column(Float)
@@ -186,6 +203,8 @@ class SensorReading(Base):
     rainfall = Column(Float)
 
     wind_speed = Column(Float)
+
+    light_intensity = Column(Float, default=0.0)
 
     timestamp = Column(
         DateTime,

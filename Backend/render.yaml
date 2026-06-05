@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: weather-intelligence-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_NAME
+        value: Weather Intelligence Platform
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false        # Set this manually in Render dashboard
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"

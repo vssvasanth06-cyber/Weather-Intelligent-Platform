@@ -3,6 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database.connection import engine
 from app.database.models import Base
+from app.alerts.alerts_router import (
+    router as alerts_router
+)
+from app.admin.admin_router import (
+    router as admin_stats_router
+)
 
 from app.auth.auth_router import router as auth_router
 
@@ -14,6 +20,7 @@ from app.devices.device_router import router as device_router
 from app.sensors.sensor_router import router as sensor_router
 
 from app.dashboard.dashboard_router import router as dashboard_router
+from app.websocket.ws_router import router as ws_router
 
 
 # Create Database Tables
@@ -61,3 +68,12 @@ app.include_router(sensor_router)
 
 # Dashboard Routes
 app.include_router(dashboard_router)
+
+# Alert Routes
+app.include_router(alerts_router)
+app.include_router(
+    admin_stats_router
+)
+
+# WebSocket Routes
+app.include_router(ws_router)

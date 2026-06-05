@@ -1,11 +1,62 @@
+import {
+    BrowserRouter,
+    Routes,
+    Route
+} from "react-router-dom";
+
+import Login from "./pages/Login";
+
+import AdminDashboard from "./pages/AdminDashboard";
+import FarmerDashboard from "./pages/FarmerDashboard";
+import AnalystDashboard from "./pages/AnalystDashboard";
+
+import ProtectedRoute from "./routes/ProtectedRoute";
+
 function App() {
-  return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-      <h1 className="text-5xl font-bold text-blue-600">
-        Weather Intelligence Platform
-      </h1>
-    </div>
-  )
+
+    return (
+
+        <BrowserRouter>
+
+            <Routes>
+
+                <Route
+                    path="/"
+                    element={<Login />}
+                />
+
+                <Route
+                    path="/admin"
+                    element={
+                        <ProtectedRoute role="Admin">
+                            <AdminDashboard />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/farmer"
+                    element={
+                        <ProtectedRoute role="Farmer">
+                            <FarmerDashboard />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/analyst"
+                    element={
+                        <ProtectedRoute role="Analyst">
+                            <AnalystDashboard />
+                        </ProtectedRoute>
+                    }
+                />
+
+            </Routes>
+
+        </BrowserRouter>
+
+    );
 }
 
-export default App
+export default App;
